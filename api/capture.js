@@ -133,7 +133,7 @@ module.exports = async function handler(req, res) {
 
   if (!image) return res.status(400).send("No image supplied.");
 
-  const ok = /^data:image\\/(jpeg|jpg|png|webp);base64,/i.test(image);
+  const ok = /^data:image\/(jpeg|jpg|png|webp);base64,/i.test(image);
   if (!ok) return res.status(400).send("Image must be JPEG, PNG, or WebP.");
 
   try {
