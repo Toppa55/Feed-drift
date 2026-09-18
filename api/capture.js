@@ -1,5 +1,3 @@
-const { waitUntil } = require("@vercel/functions");
-
 const MODEL = "gpt-5.6-luna";
 
 function cors(req, res) {
@@ -96,6 +94,7 @@ Scores are independent. Judge only visible content. Do not identify people or in
     at: new Date().toISOString(),
     scores
   }));
+  return scores;
 }
 
 module.exports = async function handler(req, res) {
@@ -137,11 +136,11 @@ module.exports = async function handler(req, res) {
   const ok = /^data:image\\/(jpeg|jpg|png|webp);base64,/i.test(image);
   if (!ok) return res.status(400).send("Image must be JPEG, PNG, or WebP.");
 
-  waitUntil(
-    analyseOne(image).catch(err => {
-      console.error("FEED_DRIFT_CAPTURE_ERROR", err);
-    })
-  );
-
-  return res.status(202).send("OK");
+  try {
+    const scores = await analyseOne(image);
+    return res.status(200).json({ ok: true, scores });
+  } catch (err) {
+    console.error("FEED_DRIFT_CAPTURE_ERROR", err);
+    return res.status(500).json({ error: err?.message || "Capture analysis failed." });
+  }
 };
