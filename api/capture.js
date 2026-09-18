@@ -101,12 +101,27 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ error: "Feed Drift access token is incorrect." });
   }
 
-  let image = typeof req.body?.image === "string" ? req.body.image.trim() : "";
-  if (!image) return res.status(400).json({ error: "No image supplied." });
-  if (!image.startsWith("data:image/")) image = `data:image/jpeg;base64,${image}`;
+  let image = "";
 
-  const ok = /^data:image\/(jpeg|jpg|png|webp);base64,/i.test(image);
-  if (!ok) return res.status(400).json({ error: "Image must be base64 JPEG, PNG, or WebP." });
+  const contentType = String(req.headers["content-type"] || "").toLowerCase();
+
+  // Preferred iOS Shortcuts path: send the resized JPEG directly.
+  if (Buffer.isBuffer(req.body)) {
+    const mime = contentType.startsWith("image/") ? contentType.split(";")[0] : "image/jpeg";
+    image = `data:${mime};base64,${req.body.toString("base64")}`;
+  } else if (req.body instanceof Uint8Array) {
+    const mime = contentType.startsWith("image/") ? contentType.split(";")[0] : "image/jpeg";
+    image = `data:${mime};base64,${Buffer.from(req.body).toString("base64")}`;
+  } else if (typeof req.body?.image === "string") {
+    // Backward-compatible JSON/base64 path.
+    image = req.body.image.trim();
+    if (!image.startsWith("data:image/")) image = `data:image/jpeg;base64,${image}`;
+  }
+
+  if (!image) return res.status(400).send("No image supplied.");
+
+  const ok = /^data:image\\/(jpeg|jpg|png|webp);base64,/i.test(image);
+  if (!ok) return res.status(400).send("Image must be JPEG, PNG, or WebP.");
 
   waitUntil(
     analyseOne(image).catch(err => {
@@ -114,5 +129,5 @@ module.exports = async function handler(req, res) {
     })
   );
 
-  return res.status(202).json({ accepted: true });
+  return res.status(202).send("OK");
 };
