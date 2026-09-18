@@ -1,3 +1,4 @@
+const { saveSession } = require("../lib/history-store");
 const MODEL = "gpt-5.6-luna";
 
 function cors(req, res) {
@@ -139,7 +140,25 @@ module.exports = async function handler(req, res) {
 
   try {
     const scores = await analyseOne(image);
-    return res.status(200).json({ ok: true, scores });
+    const createdAt = Date.now();
+    const session = {
+      id: `${createdAt}-${crypto.randomUUID()}`,
+      createdAt,
+      mood: null,
+      frameCount: 1,
+      highSexualShare: Number(scores.sexualized) >= 60 ? 100 : 0,
+      fingerprint: scores,
+      source: "automatic",
+      model: MODEL
+    };
+    let stored = false;
+    try {
+      const saved = await saveSession(session);
+      stored = Boolean(saved.stored);
+    } catch (storageErr) {
+      console.error("FEED_DRIFT_CAPTURE_STORAGE_ERROR", storageErr);
+    }
+    return res.status(200).json({ ok: true, scores, stored, sessionId: session.id });
   } catch (err) {
     console.error("FEED_DRIFT_CAPTURE_ERROR", err);
     return res.status(500).json({ error: err?.message || "Capture analysis failed." });
