@@ -19,7 +19,10 @@
         <div class="eyebrow">PERSONAL FEED BASELINE</div>
         <h1>Feed Drift</h1>
       </div>
-      <button class="ghost small" id="settingsBtn" aria-label="Settings">⚙︎</button>
+      <div class="topbar-actions">
+        <span id="syncStatus" class="privacy-pill sync-pill">Checking sync…</span>
+        <button class="ghost small" id="settingsBtn" aria-label="Settings">⚙︎</button>
+      </div>
     </header>
 
     <section class="hero card">
@@ -50,80 +53,6 @@
         <strong id="baselineValue">—</strong>
         <span class="trend" id="baselineCaption">First 7 scans build it</span>
       </div>
-    </section>
-
-    <section class="card scan-card">
-      <div class="section-head">
-        <div>
-          <div class="eyebrow">NEW CHECK</div>
-          <h2>Scan your feed</h2>
-        </div>
-        <div class="scan-badges"><span class="privacy-pill">AI vision</span><span id="syncStatus" class="privacy-pill sync-pill">Checking sync…</span></div>
-      </div>
-      <p class="muted">
-        Screen-record Instagram while you scroll normally. Feed Drift extracts a small set of still frames on your phone,
-        sends only those frames for AI analysis, then stores the resulting scores — not the recording.
-      </p>
-
-      <label class="upload" for="videoInput">
-        <span class="upload-icon">＋</span>
-        <span>
-          <b>Choose screen recording</b>
-          <small>The full video is never uploaded</small>
-        </span>
-      </label>
-      <input id="videoInput" type="file" accept="video/*" hidden />
-
-      <div id="fileRow" class="file-row hidden">
-        <span id="fileName"></span>
-        <button id="clearFileBtn" class="ghost small">Remove</button>
-      </div>
-
-      <div class="scan-options">
-        <label>
-          Sample spacing
-          <select id="sampleEvery">
-            <option value="3">3 seconds</option>
-            <option value="4" selected>4 seconds</option>
-            <option value="5">5 seconds</option>
-            <option value="6">6 seconds</option>
-          </select>
-        </label>
-        <label>
-          Max AI frames
-          <select id="maxFrames">
-            <option value="16">16</option>
-            <option value="20">20</option>
-            <option value="24" selected>24</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="mood-row">
-        <div>
-          <b>How are you feeling?</b>
-          <small>Optional. Useful while Feed Drift learns your pattern.</small>
-        </div>
-        <div class="mood-buttons" id="moodButtons">
-          <button data-mood="1" title="Very low">1</button>
-          <button data-mood="2" title="Low">2</button>
-          <button data-mood="3" title="Okay">3</button>
-          <button data-mood="4" title="Good">4</button>
-          <button data-mood="5" title="Very good">5</button>
-        </div>
-      </div>
-
-      <button id="analyzeBtn" class="primary" disabled>Analyse with AI</button>
-
-      <div id="progressWrap" class="progress-wrap hidden">
-        <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
-        <div class="progress-copy">
-          <span id="progressText">Preparing…</span>
-          <span id="progressCount"></span>
-        </div>
-      </div>
-
-      <div id="modelNotice" class="notice hidden"></div>
     </section>
 
     <section class="card">
@@ -171,11 +100,6 @@
         <button id="closeSettingsBtn" type="button" class="ghost small" aria-label="Close settings">✕</button>
       </div>
       <label class="field">
-        AI endpoint
-        <input id="apiEndpoint" type="url" placeholder="/api/analyze" />
-        <small>Use /api/analyze when the app is hosted with its Vercel backend, or paste your backend URL.</small>
-      </label>
-      <label class="field">
         Feed Drift access token
         <input id="accessToken" type="password" autocomplete="off" placeholder="Your private backend token" />
         <small>This is your Feed Drift backend token, not your OpenAI API key. The OpenAI key stays on the server.</small>
@@ -203,8 +127,6 @@
     </form>
   </dialog>
 
-  <video id="video" playsinline muted class="hidden"></video>
-  <canvas id="canvas" class="hidden"></canvas>
   <script src="app.js"></script>
 </body>
 </html>
