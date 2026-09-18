@@ -10,9 +10,9 @@ module.exports = async function handler(req, res) {
 
   if (req.method !== "POST") return res.status(200).send("METHOD_NOT_POST");
 
-  const tokenHeader = req.headers["x-feed-drift-token"];
+  const suppliedToken = req.headers["x-feed-drift-token"] || req.query?.token;
   const tokenConfigured = !!process.env.FEED_DRIFT_TOKEN;
-  const tokenMatches = tokenConfigured && tokenHeader === process.env.FEED_DRIFT_TOKEN;
+  const tokenMatches = tokenConfigured && suppliedToken === process.env.FEED_DRIFT_TOKEN;
   const openaiConfigured = !!process.env.OPENAI_API_KEY;
 
   const contentType = String(req.headers["content-type"] || "unknown");
