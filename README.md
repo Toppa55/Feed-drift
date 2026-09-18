@@ -1,42 +1,37 @@
-# Feed Drift — MVP
+# Feed Drift — AI vision MVP
 
-Feed Drift is a local-first prototype for detecting changes in the visual character of your Instagram feed relative to your own baseline.
+Feed Drift detects changes in the visual character of a person's social-media feed relative to their own baseline.
 
-## What this version does
+## What changed in v0.3
 
-- Accepts an iPhone/Android/desktop screen recording.
-- Samples one frame every 1.5–3 seconds.
-- Runs NSFWJS in the browser and converts its `Sexy`, `Porn`, and `Hentai` probabilities into a *sexual-content exposure* signal.
-- Stores only scan summaries in browser `localStorage`; the selected video is not saved by the app.
-- Builds an initial baseline from the first 7 scans by default.
-- Compares the latest 48-hour average with that baseline and shows Stable / Watch / Drifting states.
-- Allows an optional 1–5 mood check-in during the learning period.
-- Exports summary data as JSON.
-- Installs as a PWA when served over HTTPS.
+- Replaced the generic NSFW classifier with OpenAI vision (`gpt-5.6-luna`).
+- The browser extracts up to 24 JPEG frames from a screen recording. The full recording is never uploaded.
+- AI scores every frame from 0–100 for: sexualised content, fitness/body, dating/relationships, humour, work/tech, negative/conflict, and luxury/status.
+- The app creates a multi-dimensional feed fingerprint and tracks the sexualised-content score against the user's baseline.
+- AI credentials are kept server-side. Never put an OpenAI API key in `app.js` or browser localStorage.
 
-## Important limitations
+## Recommended deployment: Vercel
 
-This is a personal pattern detector, not a diagnostic or clinical tool. The image classifier will make mistakes. Treat the value as a repeatable signal to compare with your own history, not an objective measure of sexual content.
+GitHub Pages can host the front end but cannot safely hold an OpenAI API key. Vercel can host both the front end and `/api/analyze` from this same repository.
 
-The first run requires an internet connection to fetch TensorFlow.js, NSFWJS and its model. Classification then runs in the browser. For a production/private deployment, vendor the JS and model assets into the project instead of loading them from a CDN.
+1. Import this GitHub repository into Vercel.
+2. Add two Vercel environment variables:
+   - `OPENAI_API_KEY` = your OpenAI API key
+   - `FEED_DRIFT_TOKEN` = a long random private string you invent
+3. Deploy.
+4. Open the Vercel URL in Safari and add it to the iPhone Home Screen.
+5. In Feed Drift Settings, keep AI endpoint as `/api/analyze` and paste your `FEED_DRIFT_TOKEN` into the Feed Drift access-token field.
 
-## Easiest iPhone setup
-
-1. Upload this folder to any static HTTPS host (GitHub Pages, Netlify, Cloudflare Pages, etc.).
-2. Open the site in Safari.
-3. Share → Add to Home Screen.
-4. Screen-record 60–120 seconds of normal Instagram scrolling.
-5. Open Feed Drift and select the recording.
-6. Repeat periodically; the first 7 scans form the default baseline.
-
-## Local desktop test
-
-From the folder:
-
-    python -m http.server 8080
-
-Then open `http://localhost:8080`.
+Do not share either secret publicly. `FEED_DRIFT_TOKEN` protects the personal API endpoint from casual third-party use; the OpenAI key never goes to the browser.
 
 ## Privacy model
 
-Raw screen recordings are opened through a browser object URL, sampled in memory, and released after analysis. Only aggregate metrics are written to localStorage. This prototype does not upload the recording to a backend.
+- The selected screen recording stays in the browser.
+- The browser extracts a maximum of 24 reduced JPEG screenshots.
+- Those screenshots are sent to the Feed Drift backend and then to OpenAI for analysis.
+- Feed Drift stores only category scores, timestamps and optional mood check-ins in localStorage.
+- The backend uses `store: false` for the OpenAI Responses API.
+
+## Interpretation
+
+This is a personal pattern detector, not a diagnostic tool. A rise in a category is an observation about the user's feed relative to their own history, not evidence that the category caused a mood change or that a mental-health condition is present.

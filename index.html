@@ -29,7 +29,7 @@
           <span id="statusLabel">Learning your baseline</span>
         </div>
         <div class="big-number" id="driftValue">—</div>
-        <div class="muted" id="driftCaption">Complete your first scan to begin.</div>
+        <div class="muted" id="driftCaption">Complete your first AI scan to begin.</div>
       </div>
       <div class="ring" id="ring">
         <div class="ring-inner">
@@ -41,7 +41,7 @@
 
     <section class="grid two">
       <div class="metric card">
-        <span class="metric-label">Sexual-content exposure</span>
+        <span class="metric-label">Sexualised-content score</span>
         <strong id="sexualNow">—</strong>
         <span class="trend" id="sexualTrend">No data yet</span>
       </div>
@@ -58,18 +58,18 @@
           <div class="eyebrow">NEW CHECK</div>
           <h2>Scan your feed</h2>
         </div>
-        <span class="privacy-pill">Processed on device</span>
+        <span class="privacy-pill">AI vision</span>
       </div>
       <p class="muted">
-        Screen-record Instagram while you scroll normally, then choose the recording here.
-        Feed Drift samples frames and stores only summary statistics — not the video.
+        Screen-record Instagram while you scroll normally. Feed Drift extracts a small set of still frames on your phone,
+        sends only those frames for AI analysis, then stores the resulting scores — not the recording.
       </p>
 
       <label class="upload" for="videoInput">
         <span class="upload-icon">＋</span>
         <span>
           <b>Choose screen recording</b>
-          <small>Video stays in your browser</small>
+          <small>The full video is never uploaded</small>
         </span>
       </label>
       <input id="videoInput" type="file" accept="video/*" hidden />
@@ -81,19 +81,20 @@
 
       <div class="scan-options">
         <label>
-          Sample every
+          Sample spacing
           <select id="sampleEvery">
-            <option value="1.5">1.5 seconds</option>
-            <option value="2" selected>2 seconds</option>
             <option value="3">3 seconds</option>
+            <option value="4" selected>4 seconds</option>
+            <option value="5">5 seconds</option>
+            <option value="6">6 seconds</option>
           </select>
         </label>
         <label>
-          Sexual threshold
-          <select id="sexualThreshold">
-            <option value="0.35">35%</option>
-            <option value="0.45" selected>45%</option>
-            <option value="0.55">55%</option>
+          Max AI frames
+          <select id="maxFrames">
+            <option value="16">16</option>
+            <option value="20">20</option>
+            <option value="24" selected>24</option>
           </select>
         </label>
       </div>
@@ -101,7 +102,7 @@
       <div class="mood-row">
         <div>
           <b>How are you feeling?</b>
-          <small>Optional. Useful during the learning period.</small>
+          <small>Optional. Useful while Feed Drift learns your pattern.</small>
         </div>
         <div class="mood-buttons" id="moodButtons">
           <button data-mood="1" title="Very low">1</button>
@@ -112,7 +113,7 @@
         </div>
       </div>
 
-      <button id="analyzeBtn" class="primary" disabled>Analyse recording</button>
+      <button id="analyzeBtn" class="primary" disabled>Analyse with AI</button>
 
       <div id="progressWrap" class="progress-wrap hidden">
         <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
@@ -123,6 +124,18 @@
       </div>
 
       <div id="modelNotice" class="notice hidden"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">FEED FINGERPRINT</div>
+          <h2>Latest scan</h2>
+        </div>
+      </div>
+      <div id="fingerprint" class="fingerprint">
+        <div class="empty small-empty">Your category fingerprint will appear after your first scan.</div>
+      </div>
     </section>
 
     <section class="card">
@@ -142,8 +155,8 @@
     <section class="card subtle">
       <h3>What the alert means</h3>
       <p>
-        Feed Drift looks for changes relative to <em>your own</em> history. It does not diagnose depression
-        or claim that one kind of content causes a mood change. It simply surfaces patterns you may want to notice earlier.
+        Feed Drift compares your current feed with your own history. It does not diagnose depression and it does not claim
+        that any category causes a mood change. It surfaces changes that may be useful for you to notice earlier.
       </p>
     </section>
   </main>
@@ -158,6 +171,16 @@
         <button class="ghost small" value="cancel">✕</button>
       </div>
       <label class="field">
+        AI endpoint
+        <input id="apiEndpoint" type="url" placeholder="/api/analyze" />
+        <small>Use /api/analyze when the app is hosted with its Vercel backend, or paste your backend URL.</small>
+      </label>
+      <label class="field">
+        Feed Drift access token
+        <input id="accessToken" type="password" autocomplete="off" placeholder="Your private backend token" />
+        <small>This is your Feed Drift backend token, not your OpenAI API key. The OpenAI key stays on the server.</small>
+      </label>
+      <label class="field">
         Baseline scan count
         <input id="baselineCount" type="number" min="3" max="30" value="7" />
         <small>The first completed scans used as your initial reference.</small>
@@ -165,16 +188,16 @@
       <label class="field">
         Watch threshold
         <input id="watchThreshold" type="number" min="1" max="50" value="5" />
-        <small>Percentage-point rise above baseline that triggers “Watch”.</small>
+        <small>Rise in sexualised-content score above baseline that triggers “Worth noticing”.</small>
       </label>
       <label class="field">
         Drift threshold
         <input id="driftThreshold" type="number" min="2" max="60" value="10" />
-        <small>Percentage-point rise above baseline that triggers “Drifting”.</small>
+        <small>Rise above baseline that triggers “Feed is drifting”.</small>
       </label>
       <div class="dialog-actions">
         <button id="exportBtn" type="button" class="ghost">Export data</button>
-        <button id="resetBtn" type="button" class="danger">Reset all data</button>
+        <button id="resetBtn" type="button" class="danger">Reset all scan data</button>
         <button id="saveSettingsBtn" value="default" class="primary">Save</button>
       </div>
     </form>
@@ -182,9 +205,6 @@
 
   <video id="video" playsinline muted class="hidden"></video>
   <canvas id="canvas" class="hidden"></canvas>
-
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/nsfwjs@4.4.0/dist/browser/nsfwjs.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
