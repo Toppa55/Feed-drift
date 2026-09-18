@@ -10,6 +10,14 @@ function cors(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 }
 
+async function readRawBody(req) {
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
 function extractOutputText(data) {
   for (const item of data.output || []) {
     if (item.type !== "message") continue;
@@ -112,6 +120,12 @@ module.exports = async function handler(req, res) {
   } else if (req.body instanceof Uint8Array) {
     const mime = contentType.startsWith("image/") ? contentType.split(";")[0] : "image/jpeg";
     image = `data:${mime};base64,${Buffer.from(req.body).toString("base64")}`;
+  } else if (contentType.startsWith("image/")) {
+    const raw = await readRawBody(req);
+    if (raw.length) {
+      const mime = contentType.split(";")[0];
+      image = `data:${mime};base64,${raw.toString("base64")}`;
+    }
   } else if (typeof req.body?.image === "string") {
     // Backward-compatible JSON/base64 path.
     image = req.body.image.trim();
