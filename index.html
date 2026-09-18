@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#132238" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Feed Drift" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Feed Drift</title>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">PERSONAL FEED BASELINE</div>
+        <h1>Feed Drift</h1>
+      </div>
+      <button class="ghost small" id="settingsBtn" aria-label="Settings">⚙︎</button>
+    </header>
+
+    <section class="hero card">
+      <div>
+        <div class="status-line">
+          <span class="dot" id="statusDot"></span>
+          <span id="statusLabel">Learning your baseline</span>
+        </div>
+        <div class="big-number" id="driftValue">—</div>
+        <div class="muted" id="driftCaption">Complete your first scan to begin.</div>
+      </div>
+      <div class="ring" id="ring">
+        <div class="ring-inner">
+          <span id="ringValue">0</span>
+          <small>scans</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid two">
+      <div class="metric card">
+        <span class="metric-label">Sexual-content exposure</span>
+        <strong id="sexualNow">—</strong>
+        <span class="trend" id="sexualTrend">No data yet</span>
+      </div>
+      <div class="metric card">
+        <span class="metric-label">Personal baseline</span>
+        <strong id="baselineValue">—</strong>
+        <span class="trend" id="baselineCaption">First 7 scans build it</span>
+      </div>
+    </section>
+
+    <section class="card scan-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">NEW CHECK</div>
+          <h2>Scan your feed</h2>
+        </div>
+        <span class="privacy-pill">Processed on device</span>
+      </div>
+      <p class="muted">
+        Screen-record Instagram while you scroll normally, then choose the recording here.
+        Feed Drift samples frames and stores only summary statistics — not the video.
+      </p>
+
+      <label class="upload" for="videoInput">
+        <span class="upload-icon">＋</span>
+        <span>
+          <b>Choose screen recording</b>
+          <small>Video stays in your browser</small>
+        </span>
+      </label>
+      <input id="videoInput" type="file" accept="video/*" hidden />
+
+      <div id="fileRow" class="file-row hidden">
+        <span id="fileName"></span>
+        <button id="clearFileBtn" class="ghost small">Remove</button>
+      </div>
+
+      <div class="scan-options">
+        <label>
+          Sample every
+          <select id="sampleEvery">
+            <option value="1.5">1.5 seconds</option>
+            <option value="2" selected>2 seconds</option>
+            <option value="3">3 seconds</option>
+          </select>
+        </label>
+        <label>
+          Sexual threshold
+          <select id="sexualThreshold">
+            <option value="0.35">35%</option>
+            <option value="0.45" selected>45%</option>
+            <option value="0.55">55%</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="mood-row">
+        <div>
+          <b>How are you feeling?</b>
+          <small>Optional. Useful during the learning period.</small>
+        </div>
+        <div class="mood-buttons" id="moodButtons">
+          <button data-mood="1" title="Very low">1</button>
+          <button data-mood="2" title="Low">2</button>
+          <button data-mood="3" title="Okay">3</button>
+          <button data-mood="4" title="Good">4</button>
+          <button data-mood="5" title="Very good">5</button>
+        </div>
+      </div>
+
+      <button id="analyzeBtn" class="primary" disabled>Analyse recording</button>
+
+      <div id="progressWrap" class="progress-wrap hidden">
+        <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+        <div class="progress-copy">
+          <span id="progressText">Preparing…</span>
+          <span id="progressCount"></span>
+        </div>
+      </div>
+
+      <div id="modelNotice" class="notice hidden"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">TREND</div>
+          <h2>Recent scans</h2>
+        </div>
+      </div>
+      <div id="trendChart" class="chart">
+        <div class="empty">Your trend will appear after your first scan.</div>
+      </div>
+      <div id="patternInsight" class="pattern-insight">Add a few optional mood check-ins and Feed Drift can estimate whether feed changes tend to accompany mood changes for you.</div>
+      <div id="history" class="history"></div>
+    </section>
+
+    <section class="card subtle">
+      <h3>What the alert means</h3>
+      <p>
+        Feed Drift looks for changes relative to <em>your own</em> history. It does not diagnose depression
+        or claim that one kind of content causes a mood change. It simply surfaces patterns you may want to notice earlier.
+      </p>
+    </section>
+  </main>
+
+  <dialog id="settingsDialog">
+    <form method="dialog" class="dialog-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">SETTINGS</div>
+          <h2>Feed Drift</h2>
+        </div>
+        <button class="ghost small" value="cancel">✕</button>
+      </div>
+      <label class="field">
+        Baseline scan count
+        <input id="baselineCount" type="number" min="3" max="30" value="7" />
+        <small>The first completed scans used as your initial reference.</small>
+      </label>
+      <label class="field">
+        Watch threshold
+        <input id="watchThreshold" type="number" min="1" max="50" value="5" />
+        <small>Percentage-point rise above baseline that triggers “Watch”.</small>
+      </label>
+      <label class="field">
+        Drift threshold
+        <input id="driftThreshold" type="number" min="2" max="60" value="10" />
+        <small>Percentage-point rise above baseline that triggers “Drifting”.</small>
+      </label>
+      <div class="dialog-actions">
+        <button id="exportBtn" type="button" class="ghost">Export data</button>
+        <button id="resetBtn" type="button" class="danger">Reset all data</button>
+        <button id="saveSettingsBtn" value="default" class="primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <video id="video" playsinline muted class="hidden"></video>
+  <canvas id="canvas" class="hidden"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nsfwjs@4.4.0/dist/browser/nsfwjs.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
