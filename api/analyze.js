@@ -28,9 +28,16 @@ module.exports = async function handler(req, res) {
   if (!process.env.FEED_DRIFT_TOKEN) return res.status(503).json({ error: "Server is missing FEED_DRIFT_TOKEN." });
   if (req.headers["x-feed-drift-token"] !== process.env.FEED_DRIFT_TOKEN) return res.status(401).json({ error: "Feed Drift access token is incorrect." });
 
-  const images = Array.isArray(req.body?.images) ? req.body.images.slice(0, MAX_IMAGES) : [];
+  let images = Array.isArray(req.body?.images) ? req.body.images.slice(0, MAX_IMAGES) : [];
+  if (!images.length && typeof req.body?.image === "string") {
+    const one = req.body.image.trim();
+    images = [one.startsWith("data:image/") ? one : `data:image/jpeg;base64,${one}`];
+  }
   if (!images.length) return res.status(400).json({ error: "No frames were supplied." });
-  if (images.some(x => typeof x !== "string" || !x.startsWith("data:image/jpeg;base64,"))) return res.status(400).json({ error: "Frames must be JPEG data URLs." });
+  const imageDataUrl = /^data:image\/(jpeg|jpg|png|webp);base64,/i;
+  if (images.some(x => typeof x !== "string" || !imageDataUrl.test(x))) {
+    return res.status(400).json({ error: "Frames must be base64 JPEG, PNG, or WebP images." });
+  }
 
   const prompt = `You are analysing sampled screenshots from one person's social-media recommendation feed. Each image is a separate chronological sample from the same scan.
 
