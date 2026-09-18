@@ -41,6 +41,51 @@
   function fmtDate(ts){return new Intl.DateTimeFormat(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(ts));}
   function score(v){return v == null ? "—" : `${v.toFixed(1)}`;}
   function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+  function historyEndpoint(){return "/api/history";}
+  function authHeaders(extra={}){return settings.accessToken ? {...extra,"X-Feed-Drift-Token":settings.accessToken} : extra;}
+  function mergeSessions(remote){
+    const map=new Map(sessions.map(s=>[s.id,s]));
+    for(const s of remote||[]) if(s&&s.id) map.set(s.id,s);
+    sessions=[...map.values()].sort((a,b)=>a.createdAt-b.createdAt);
+    save();
+  }
+  async function syncServerHistory(){
+    const pill=$("syncStatus");
+    if(!settings.accessToken){if(pill)pill.textContent="Sync needs token";return;}
+    try{
+      const r=await fetch(historyEndpoint(),{headers:authHeaders(),cache:"no-store"});
+      if(!r.ok) throw new Error(`History sync failed (${r.status})`);
+      const data=await r.json();
+      if(data.enabled){
+        mergeSessions(data.sessions||[]);
+        if(pill)pill.textContent="Automatic sync on";
+        render();
+      }else{
+        if(pill)pill.textContent="Server storage off";
+      }
+    }catch(err){
+      console.warn(err);
+      if(pill)pill.textContent="Sync unavailable";
+    }
+  }
+  async function persistSessionToServer(session){
+    if(!settings.accessToken)return false;
+    try{
+      const r=await fetch(historyEndpoint(),{method:"POST",headers:authHeaders({"Content-Type":"application/json"}),body:JSON.stringify(session)});
+      if(!r.ok)return false;
+      const data=await r.json();
+      if($("syncStatus"))$("syncStatus").textContent=data.enabled?"Automatic sync on":"Server storage off";
+      return Boolean(data.stored);
+    }catch{return false;}
+  }
+  async function deleteSessionFromServer(id){
+    if(!settings.accessToken)return;
+    try{await fetch(`${historyEndpoint()}?id=${encodeURIComponent(id)}`,{method:"DELETE",headers:authHeaders()});}catch{}
+  }
+  async function resetServerHistory(){
+    if(!settings.accessToken)return;
+    try{await fetch(`${historyEndpoint()}?all=1`,{method:"DELETE",headers:authHeaders()});}catch{}
+  }
 
   function vectorAverage(list){
     if (!list.length) return null;
@@ -122,8 +167,8 @@
   }
   function renderHistory(){
     const el=$("history"); if(!sessions.length){el.innerHTML="";return;}
-    el.innerHTML=sessions.slice().reverse().slice(0,10).map(s=>`<div class="history-row"><div><div class="history-date">${fmtDate(s.createdAt)}</div><div class="history-meta">${s.frameCount} AI frames${s.mood?` · mood ${s.mood}/5`:""} · high-sexual ${s.highSexualShare.toFixed(0)}%</div></div><div class="history-score">${s.fingerprint.sexualized.toFixed(1)}</div><button class="history-delete" data-delete="${s.id}" aria-label="Delete scan">✕</button></div>`).join("");
-    el.querySelectorAll("[data-delete]").forEach(btn=>btn.addEventListener("click",()=>{sessions=sessions.filter(s=>s.id!==btn.dataset.delete);save();render();}));
+    el.innerHTML=sessions.slice().reverse().slice(0,10).map(s=>`<div class="history-row"><div><div class="history-date">${fmtDate(s.createdAt)}</div><div class="history-meta">${s.source==="automatic"?"Automatic sample":`${s.frameCount} AI frames`}${s.mood?` · mood ${s.mood}/5`:""} · high-sexual ${Number(s.highSexualShare||0).toFixed(0)}%</div></div><div class="history-score">${s.fingerprint.sexualized.toFixed(1)}</div><button class="history-delete" data-delete="${s.id}" aria-label="Delete scan">✕</button></div>`).join("");
+    el.querySelectorAll("[data-delete]").forEach(btn=>btn.addEventListener("click",async()=>{const id=btn.dataset.delete;sessions=sessions.filter(s=>s.id!==id);save();render();await deleteSessionFromServer(id);}));
   }
 
   videoInput.addEventListener("change",()=>{chosenFile=videoInput.files?.[0]??null;$("fileRow").classList.toggle("hidden",!chosenFile);$("fileName").textContent=chosenFile?`${chosenFile.name} · ${(chosenFile.size/1024/1024).toFixed(1)} MB`:"";analyzeBtn.disabled=!chosenFile;});
@@ -174,18 +219,21 @@
       for(const [key] of CATEGORIES) fingerprint[key]=avg(frames.map(f=>Number(f[key])||0))||0;
       const highSexualShare=100*frames.filter(f=>(Number(f.sexualized)||0)>=60).length/frames.length;
       const session={id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,createdAt:Date.now(),mood:selectedMood,frameCount:frames.length,highSexualShare,fingerprint,sampleEverySeconds:every,videoDurationSeconds:extracted.duration,model:result.model||"gpt-5.6-luna"};
-      sessions.push(session);save();$("progressBar").style.width="100%";$("progressText").textContent="Scan complete";$("progressCount").textContent=`Sexualised ${fingerprint.sexualized.toFixed(1)}`;
+      sessions.push(session);save();persistSessionToServer(session);$("progressBar").style.width="100%";$("progressText").textContent="Scan complete";$("progressCount").textContent=`Sexualised ${fingerprint.sexualized.toFixed(1)}`;
       chosenFile=null;videoInput.value="";$("fileRow").classList.add("hidden");selectedMood=null;$("moodButtons").querySelectorAll("button").forEach(b=>b.classList.remove("active"));render();setTimeout(()=>$("progressWrap").classList.add("hidden"),2400);
     } catch(err){console.error(err);let msg=err.message;if(/404|backend/i.test(msg))msg += " Open Settings and check the AI endpoint. GitHub Pages alone cannot hold the private OpenAI key; the backend needs to be deployed separately or with Vercel.";$("modelNotice").textContent=`Could not complete the AI scan: ${msg}`;$("modelNotice").classList.remove("hidden");$("progressText").textContent="Scan stopped";
     } finally {analyzeBtn.disabled=!chosenFile;}
   });
 
   const dialog=$("settingsDialog");
-  $("settingsBtn").addEventListener("click",()=>{$("apiEndpoint").value=settings.apiEndpoint||"/api/analyze";$("accessToken").value=settings.accessToken||"";$("baselineCount").value=settings.baselineCount;$("watchThreshold").value=settings.watchThreshold;$("driftThreshold").value=settings.driftThreshold;dialog.showModal();});
-  $("saveSettingsBtn").addEventListener("click",()=>{settings.apiEndpoint=$("apiEndpoint").value.trim()||"/api/analyze";settings.accessToken=$("accessToken").value.trim();settings.baselineCount=clamp(Number($("baselineCount").value)||7,3,30);settings.watchThreshold=clamp(Number($("watchThreshold").value)||5,1,50);settings.driftThreshold=clamp(Number($("driftThreshold").value)||10,2,60);if(settings.driftThreshold<=settings.watchThreshold)settings.driftThreshold=settings.watchThreshold+1;save();render();});
-  $("resetBtn").addEventListener("click",()=>{if(!confirm("Delete all AI Feed Drift scan history from this browser?"))return;sessions=[];save();render();dialog.close();});
+  $("settingsBtn").addEventListener("click",()=>{$("apiEndpoint").value=settings.apiEndpoint||"/api/analyze";$("accessToken").value=settings.accessToken||"";$("baselineCount").value=settings.baselineCount;$("watchThreshold").value=settings.watchThreshold;$("driftThreshold").value=settings.driftThreshold;if(!dialog.open)dialog.showModal();});
+  $("closeSettingsBtn").addEventListener("click",(e)=>{e.preventDefault();dialog.close();});
+  $("saveSettingsBtn").addEventListener("click",async(e)=>{e.preventDefault();settings.apiEndpoint=$("apiEndpoint").value.trim()||"/api/analyze";settings.accessToken=$("accessToken").value.trim();settings.baselineCount=clamp(Number($("baselineCount").value)||7,3,30);settings.watchThreshold=clamp(Number($("watchThreshold").value)||5,1,50);settings.driftThreshold=clamp(Number($("driftThreshold").value)||10,2,60);if(settings.driftThreshold<=settings.watchThreshold)settings.driftThreshold=settings.watchThreshold+1;save();render();dialog.close();await syncServerHistory();});
+  dialog.addEventListener("click",(e)=>{if(e.target===dialog)dialog.close();});
+  $("resetBtn").addEventListener("click",async()=>{if(!confirm("Delete all Feed Drift scan history from this browser and synced server history?"))return;sessions=[];save();render();dialog.close();await resetServerHistory();});
   $("exportBtn").addEventListener("click",()=>{const payload=JSON.stringify({exportedAt:new Date().toISOString(),settings:{...settings,accessToken:"[not exported]"},sessions},null,2);const blob=new Blob([payload],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`feed-drift-export-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);});
 
   if("serviceWorker" in navigator&&location.protocol.startsWith("http"))window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
   render();
+  syncServerHistory();
 })();
