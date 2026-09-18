@@ -58,7 +58,7 @@
           <div class="eyebrow">NEW CHECK</div>
           <h2>Scan your feed</h2>
         </div>
-        <span class="privacy-pill">AI vision</span>
+        <div class="scan-badges"><span class="privacy-pill">AI vision</span><span id="syncStatus" class="privacy-pill sync-pill">Checking sync…</span></div>
       </div>
       <p class="muted">
         Screen-record Instagram while you scroll normally. Feed Drift extracts a small set of still frames on your phone,
@@ -168,7 +168,7 @@
           <div class="eyebrow">SETTINGS</div>
           <h2>Feed Drift</h2>
         </div>
-        <button class="ghost small" value="cancel">✕</button>
+        <button id="closeSettingsBtn" type="button" class="ghost small" aria-label="Close settings">✕</button>
       </div>
       <label class="field">
         AI endpoint
@@ -198,7 +198,7 @@
       <div class="dialog-actions">
         <button id="exportBtn" type="button" class="ghost">Export data</button>
         <button id="resetBtn" type="button" class="danger">Reset all scan data</button>
-        <button id="saveSettingsBtn" value="default" class="primary">Save</button>
+        <button id="saveSettingsBtn" type="button" class="primary">Save</button>
       </div>
     </form>
   </dialog>
