@@ -104,7 +104,8 @@ module.exports = async function handler(req, res) {
 
   if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: "Server is missing OPENAI_API_KEY." });
   if (!process.env.FEED_DRIFT_TOKEN) return res.status(503).json({ error: "Server is missing FEED_DRIFT_TOKEN." });
-  if (req.headers["x-feed-drift-token"] !== process.env.FEED_DRIFT_TOKEN) {
+  const suppliedToken = req.headers["x-feed-drift-token"] || req.query?.token;
+  if (suppliedToken !== process.env.FEED_DRIFT_TOKEN) {
     return res.status(401).json({ error: "Feed Drift access token is incorrect." });
   }
 
