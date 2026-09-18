@@ -5,6 +5,9 @@
     },
     "api/capture.js": {
       "maxDuration": 60
+    },
+    "api/history.js": {
+      "maxDuration": 60
     }
   }
 }
