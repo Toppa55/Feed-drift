@@ -152,6 +152,7 @@
     renderFingerprint(latest,base);
     renderChart();
     renderPatternInsight();
+    renderCorrelationChart();
     renderHistory();
   }
 
@@ -199,6 +200,62 @@
     if(r<-.2) el.textContent=`Personal pattern: your logged data currently shows a ${strength} tendency for higher sexualised-content scores to accompany lower mood (r=${r.toFixed(2)}). This is correlation only, not a diagnosis or causal claim.`;
     else if(r>.2) el.textContent=`Personal pattern: your logged data currently shows a ${strength} tendency for higher sexualised-content scores to accompany higher mood (r=${r.toFixed(2)}). This is correlation only and may change with more data.`;
     else el.textContent=`Personal pattern: there is currently little linear relationship between sexualised-content score and your mood check-ins (r=${r.toFixed(2)}).`;
+  }
+
+  function renderCorrelationChart(){
+    const el=$("correlationChart");
+    const legend=$("correlationLegend");
+    if(!el)return;
+
+    const rated=sessions
+      .filter(s=>s.mood!=null&&Number.isFinite(Number(s.fingerprint?.sexualized)))
+      .map(s=>({x:Number(s.fingerprint.sexualized),y:Number(s.mood),createdAt:s.createdAt}));
+
+    if(rated.length<3){
+      el.innerHTML='<div class="empty">Add mood ratings to at least 3 scans to see the chart.</div>';
+      if(legend)legend.classList.add("hidden");
+      return;
+    }
+
+    if(legend)legend.classList.remove("hidden");
+
+    const width=Math.max(el.clientWidth||320,280);
+    const height=Math.max(el.clientHeight||230,180);
+    const pad={l:30,r:14,t:12,b:14};
+    const xs=rated.map(p=>p.x);
+    const rawMin=Math.min(...xs), rawMax=Math.max(...xs);
+    const spread=Math.max(10,rawMax-rawMin);
+    const minX=Math.max(0,rawMin-spread*.15);
+    const maxX=Math.min(100,rawMax+spread*.15);
+    const sx=x=>pad.l+((x-minX)/(maxX-minX||1))*(width-pad.l-pad.r);
+    const sy=y=>height-pad.b-((y-1)/4)*(height-pad.t-pad.b);
+
+    let html="";
+    for(let mood=1;mood<=5;mood++){
+      const y=sy(mood);
+      html+=`<div class="gridline" style="top:${y}px"></div>`;
+      html+=`<div class="y-label" style="top:${y}px">${mood}</div>`;
+    }
+
+    const mx=avg(rated.map(p=>p.x)), my=avg(rated.map(p=>p.y));
+    let num=0,den=0;
+    rated.forEach(p=>{num+=(p.x-mx)*(p.y-my);den+=(p.x-mx)*(p.x-mx);});
+    const slope=den?num/den:0;
+    const intercept=my-slope*mx;
+    const x1=minX,x2=maxX;
+    const y1=clamp(intercept+slope*x1,1,5),y2=clamp(intercept+slope*x2,1,5);
+    const px1=sx(x1),py1=sy(y1),px2=sx(x2),py2=sy(y2);
+    const dx=px2-px1,dy=py2-py1;
+    const len=Math.sqrt(dx*dx+dy*dy);
+    const angle=Math.atan2(dy,dx)*180/Math.PI;
+    html+=`<div class="trend-line" style="left:${px1}px;top:${py1}px;width:${len}px;transform:rotate(${angle}deg)"></div>`;
+
+    rated.forEach(p=>{
+      const label=`${p.x.toFixed(1)} exposure · mood ${p.y}/5 · ${fmtDate(p.createdAt)}`;
+      html+=`<div class="point" title="${label}" style="left:${sx(p.x)}px;top:${sy(p.y)}px"></div>`;
+    });
+
+    el.innerHTML=html;
   }
 
   function renderHistory(){
