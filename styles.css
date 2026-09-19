@@ -22,3 +22,11 @@ dialog{border:0;padding:0;background:transparent;width:min(520px,calc(100% - 24p
 .scan-badges{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.sync-pill{background:#eef5f1;color:#35614b}
 
 .topbar-actions{display:flex;align-items:center;gap:8px}.topbar-actions .privacy-pill{max-width:150px;overflow:hidden;text-overflow:ellipsis}
+
+.scatter-chart{position:relative;height:230px;margin-top:8px;border-left:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden}
+.scatter-chart .gridline{position:absolute;left:0;right:0;border-top:1px dashed #edf0f3}
+.scatter-chart .y-label{position:absolute;left:7px;transform:translateY(-50%);font-size:9px;color:#9aa2ab}
+.scatter-chart .point{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--navy);border:2px solid white;box-shadow:0 2px 8px rgba(19,34,56,.22);transform:translate(-50%,-50%)}
+.scatter-chart .trend-line{position:absolute;height:2px;background:#73879c;transform-origin:left center;opacity:.78;border-radius:99px}
+.scatter-chart .empty{position:absolute;inset:0}
+.scatter-legend{display:flex;justify-content:space-between;color:#9aa2ab;font-size:10px;margin-top:7px}
